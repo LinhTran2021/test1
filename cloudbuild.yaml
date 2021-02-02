@@ -1,0 +1,100 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger:
+  - master
+
+pool:
+  name: 'Default'
+
+variables:
+  solution: 'WebApplication1/WebApplication1.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: 'Build solution'
+  condition: always()
+  inputs:
+    command: 'build'
+    arguments: '$(solution) --configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish'
+  condition: always()
+  inputs:
+    command: 'publish'
+    projects: 'WebApplication1/WebApplication1.csproj'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: False
+
+
+
+# - powershell: |
+#     $ticketId = "$(Build.SourceBranchName)".Split("-")[0];
+#     $deploymentContainer = "D:\AutoSites\$($ticketId)";
+#     $deploymentUrl = "$($ticketId).tacotruck.gvivn.global";
+#     $IISPool = "IIS:\AppPools\$($ticketId)";
+#     $IISSite = "IIS:\Sites\$($deploymentUrl)";
+
+#     if (!($ticketId -match '^[0-9]+$'))
+#     {
+#       return;
+#     }
+
+#     Import-Module WebAdministration;
+
+#     #Verify deployment container 
+#     if (!(Test-Path $deploymentContainer -PathType Container))
+#     {
+#       #Create container
+#       New-Item -Path $deploymentContainer -ItemType "directory" -Force;
+#     }
+
+#     #---------------------------------------------------------
+#     # Create artifact directory tree
+#     #---------------------------------------------------------
+#     # Create deployment folder in the container
+#     $timeStampCode = (Get-Date).ToString("yyyyMMddhhmmss");
+#     $deploymentFolder = "$($deploymentContainer)\$($timeStampCode)";
+#     if (!(Test-Path $deploymentFolder -PathType Container))
+#     {
+#       #Create deployment folder
+#       New-Item -Path $deploymentFolder -ItemType "directory" -Force;
+#     }
+
+#     #---------------------------------------------------------
+#     # Copy files to deployment folder
+#     #---------------------------------------------------------
+#     Copy-Item -Force -Recurse –Verbose '$(Build.StagingDirectory)\TacoGDSN.WebUI\*' -Destination "$($deploymentFolder)";
+
+#     #---------------------------------------------------------------
+#     # Create Application Pool and IIS Site | Assign Physical Path 
+#     #---------------------------------------------------------------
+#     # Create Application Pool if required
+#     if (!(Test-Path $IISPool -PathType Container))
+#     {
+#       New-WebAppPool -Name $ticketId;
+#       Set-ItemProperty $IISPool managedRuntimeVersion v4.0;
+#     }
+
+#     # Create IIS Site if required
+#     if (!(Get-Website -Name $deploymentUrl))
+#     {
+#       New-WebSite -Name $deploymentUrl -ApplicationPool $ticketId -Force;
+#       Set-ItemProperty $IISSite -Name Bindings -Value @{protocol="http";bindingInformation="*:80:$deploymentUrl"};
+#     }
+
+#     # Set Physical Path point to our deployment folder
+#     Set-ItemProperty $IISSite -Name PhysicalPath -Value $deploymentFolder;
+
+#     # Start the site if it is being stopped
+#     if ((Get-WebsiteState -Name $deploymentUrl).Value -eq "Stopped")
+#     {
+#       Start-Website -Name $deploymentUrl;
+#     }
+#   displayName: 'Deployment'
+#   condition: always()
